@@ -1,0 +1,17 @@
+#!/bin/bash
+USER="myuser"
+HOSTS_FILE="hosts.txt"
+OUTDIR="./df_results"
+CONCURRENCY=100   # tune (50-200) depending on network/ssh limits
+SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no"
+
+mkdir -p "$OUTDIR"
+
+export USER SSH_OPTS OUTDIR
+
+# GNU parallel reads hosts and runs ssh concurrently
+cat "$HOSTS_FILE" | parallel -j "$CONCURRENCY" '
+  host={};
+  echo "=== $host ===" > "$OUTDIR/$host.txt";
+  ssh $SSH_OPTS $USER@$host "df -h" >> "$OUTDIR/$host.txt" 2>&1 || echo "SSH FAILED for $host" >> "$OUTDIR/$host.txt"
+echo "Done. Results in $OUTDIR/"
